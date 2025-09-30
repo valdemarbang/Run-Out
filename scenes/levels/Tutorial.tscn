@@ -1,10 +1,16 @@
-[gd_scene load_steps=12 format=3 uid="uid://deriqsgm4kpat"]
+[gd_scene load_steps=18 format=3 uid="uid://deriqsgm4kpat"]
 
 [ext_resource type="PackedScene" uid="uid://bj2vycvc7e0co" path="res://scenes/ui/round_timer.tscn" id="1_61wbf"]
 [ext_resource type="PackedScene" uid="uid://b0if5e2t7fxl8" path="res://assets/assets_kaykit/gltf/blue/platform_6x6x4_blue.gltf" id="2_af4br"]
-[ext_resource type="Texture2D" uid="uid://c7yth5opetwes" path="res://assets/textures/kenney-dark-grey-checkerboard.png" id="6_oo8y7"]
+[ext_resource type="PackedScene" uid="uid://ugokkkpm4ucn" path="res://assets/assets_kaykit/gltf/blue/pipe_straight_B_blue.gltf" id="5_7v0t1"]
+[ext_resource type="PackedScene" uid="uid://c4r01yxhtbqn6" path="res://assets/assets_kaykit/gltf/blue/pipe_straight_A_blue.gltf" id="6_1u03y"]
+[ext_resource type="PackedScene" uid="uid://q4dsw5pnkmdm" path="res://assets/assets_kaykit/gltf/blue/barrier_4x1x4_blue.gltf" id="6_off5s"]
 [ext_resource type="Texture2D" uid="uid://b28c62e3f23vb" path="res://assets/textures/kenney-orange-checkerboard-cc0.png" id="7_1u03y"]
+[ext_resource type="PackedScene" uid="uid://d0bs703wtclk4" path="res://assets/assets_kaykit/gltf/blue/hoop_angled_blue.gltf" id="7_wpdfe"]
+[ext_resource type="PackedScene" uid="uid://hnrt8pobnvdf" path="res://assets/assets_kaykit/gltf/blue/heart_blue.gltf" id="8_d7jbs"]
 [ext_resource type="PackedScene" uid="uid://dey3j5c31717w" path="res://scenes/player/FPSController.tscn" id="8_wpdfe"]
+[ext_resource type="PackedScene" uid="uid://denl052a8og3e" path="res://assets/assets_kaykit/gltf/blue/bracing_small_blue.gltf" id="9_8y1sg"]
+[ext_resource type="PackedScene" uid="uid://d3qt23g8mgqdt" path="res://assets/assets_kaykit/gltf/blue/barrier_4x1x1_blue.gltf" id="10_pvt5t"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_bwjpn"]
 
@@ -18,10 +24,8 @@ tonemap_mode = 2
 volumetric_fog_enabled = true
 volumetric_fog_density = 0.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ixirg"]
-albedo_texture = ExtResource("6_oo8y7")
-uv1_triplanar = true
-uv1_world_triplanar = true
+[sub_resource type="BoxShape3D" id="BoxShape3D_0t4of"]
+size = Vector3(5.87994, 1, 5.19824)
 
 [sub_resource type="Curve3D" id="Curve3D_idcd7"]
 _data = {
@@ -37,6 +41,18 @@ albedo_texture = ExtResource("7_1u03y")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
+[node name="Hud" parent="UI"]
+_import_path = NodePath("")
+unique_name_in_owner = false
+process_mode = 0
+process_priority = 0
+process_physics_priority = 0
+process_thread_group = 0
+physics_interpolation_mode = 0
+auto_translate_mode = 0
+editor_description = ""
+script = null
+
 [node name="RoundTimer" parent="UI" instance=ExtResource("1_61wbf")]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -50,25 +66,69 @@ shadow_enabled = true
 [node name="Level" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, -1.478, -28)
 
-[node name="platform_6x6x4_blue2" parent="Level" instance=ExtResource("2_af4br")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34.6999, 0.220838, 14.1419)
+[node name="surf3" parent="Level" instance=ExtResource("2_af4br")]
+transform = Transform3D(-11.3137, -11.3137, -6.99382e-07, -5.65685, 5.65685, -13.8564, 9.79796, -9.79796, -8, -118.611, -60.8209, 83.3443)
 
-[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Level"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 0.98, 28)
-use_collision = true
-radius = 3.598
-height = 1.0
-material = SubResource("StandardMaterial3D_ixirg")
+[node name="StaticBody3D" type="StaticBody3D" parent="Level/surf3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.674999, 4.91001, 7.84393)
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="Level/surf3/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.761942, -1.46212, -7.90037)
+shape = SubResource("BoxShape3D_0t4of")
+
+[node name="surf2" parent="Level" instance=ExtResource("2_af4br")]
+transform = Transform3D(48, 27.7128, 32, -13.8564, 56, -27.7128, -40, 13.8564, 48, -462.007, -554.505, -466.653)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Level/surf2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.674999, 4.91001, 7.84393)
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="Level/surf2/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.761942, -1.46212, -7.90037)
+shape = SubResource("BoxShape3D_0t4of")
+
+[node name="surf" parent="Level" instance=ExtResource("2_af4br")]
+transform = Transform3D(-8.74228e-08, 1.51421e-07, -4, 3.4641, 2, 0, 2, -3.4641, -1.74846e-07, 22.2109, -8.60256, 50.7384)
 
 [node name="CharacterBody3D" parent="Level" instance=ExtResource("8_wpdfe")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.3749, 2.18946, 27.9897)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.9191, 2.18946, 21.6899)
+
+[node name="platform_6x6x4_blue3" parent="Level" instance=ExtResource("2_af4br")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 16.8378, -23.5395, 20.1458)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Level/platform_6x6x4_blue3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.674999, 4.91001, 7.84393)
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="Level/platform_6x6x4_blue3/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.761942, -1.46212, -7.90037)
+shape = SubResource("BoxShape3D_0t4of")
+
+[node name="pipe_straight_B_blue2" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("5_7v0t1")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -2.75107, -0.962124, -9.16138)
+
+[node name="pipe_straight_A_blue2" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("6_1u03y")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -2.85831, -0.962124, -7.70928)
+
+[node name="pipe_straight_B_blue3" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("5_7v0t1")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -1.03456, -0.962124, -10.1765)
+
+[node name="hoop_angled_blue2" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("7_wpdfe")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -2.00079, -0.962124, -9.61751)
+
+[node name="heart_blue2" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("8_d7jbs")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -2.05481, -0.887954, -8.48232)
+
+[node name="bracing_small_blue2" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("9_8y1sg")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -2.42047, -0.902124, -6.46269)
+
+[node name="barrier_4x1x1_blue2" parent="Level/platform_6x6x4_blue3/StaticBody3D" instance=ExtResource("10_pvt5t")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -0.317566, -0.962124, -9.70869)
 
 [node name="Path3D" type="Path3D" parent="."]
 transform = Transform3D(11.6275, 0, 0, 0, 11.6275, 0, 0, 0, 11.6275, 15.221, -0.960711, -23.0994)
 curve = SubResource("Curve3D_idcd7")
 
 [node name="CSGPolygon3D" type="CSGPolygon3D" parent="Path3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.928218)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.92997, -0.628579, 1.06692)
 material_override = SubResource("StandardMaterial3D_t5onx")
 use_collision = true
 polygon = PackedVector2Array(0, 0, 0.5, 1, 1, 0)
@@ -83,3 +143,6 @@ path_local = true
 path_continuous_u = true
 path_u_distance = 1.0
 path_joined = false
+
+[node name="barrier_4x1x4_blue2" parent="." instance=ExtResource("6_off5s")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.66104, -5.37476, -21.7389)

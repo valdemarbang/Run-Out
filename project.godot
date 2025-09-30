@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="RunOut"
-run/main_scene="uid://cumlkudt7n44b"
+run/main_scene="uid://cx2crunae4mep"
 config/features=PackedStringArray("4.4", "Forward Plus")
 
 [autoload]

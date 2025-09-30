@@ -33,6 +33,16 @@ const HEADBOB_MOVE_AMOUNT = 0.06
 const HEADBOB_FREQUENCY = 2.4
 var headbob_time := 0.0
 
+# Hud
+var health = 100
+
+# Fall damage settings
+# Fall damage settings
+var fall_start_y : float = 0.0
+var was_on_floor_last_frame : bool = true
+var fall_damage_min_velocity : float = 12.0  # minimum velocity to start taking damage
+var fall_damage_multiplier : float = 2.5    # multiplies the excess velocity to damage
+
 func get_move_speed() -> float:
 	if is_crouched:
 		return WALK_SPEED * 0.8

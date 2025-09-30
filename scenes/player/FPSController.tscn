@@ -1,7 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://dey3j5c31717w"]
+[gd_scene load_steps=7 format=3 uid="uid://dey3j5c31717w"]
 
 [ext_resource type="Script" uid="uid://d2x26c1kxayeu" path="res://scenes/player/scripts/fps_controller.gd" id="1_2j53v"]
 [ext_resource type="PackedScene" uid="uid://gvm0me264r32" path="res://assets/models/disguise-glasses.glb" id="2_jryqt"]
+[ext_resource type="PackedScene" uid="uid://b2a45ywl15r6t" path="res://scenes/ui/hud/hud.tscn" id="3_ejfxw"]
+[ext_resource type="Script" uid="uid://cmlt3isp5156x" path="res://scenes/ui/hud/hud.gd" id="4_pxail"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_f6xud"]
 
@@ -43,3 +45,6 @@ target_position = Vector3(0, -0.55, 0)
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.00883853, 0)
 target_position = Vector3(0, -0.75, 0)
+
+[node name="Hud" parent="." instance=ExtResource("3_ejfxw")]
+script = ExtResource("4_pxail")
