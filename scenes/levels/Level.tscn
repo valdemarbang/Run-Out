@@ -1,0 +1,48 @@
+[gd_scene load_steps=7 format=3 uid="uid://cumlkudt7n44b"]
+
+[ext_resource type="PackedScene" uid="uid://bj2vycvc7e0co" path="res://scenes/ui/round_timer.tscn" id="1_ajbpj"]
+[ext_resource type="Script" uid="uid://cg7ta87xn5o33" path="res://scenes/levels/level.gd" id="1_p0fye"]
+[ext_resource type="Material" uid="uid://bk7nbd8td4gb1" path="res://assets/textures/grey_checkerboard_mat.tres" id="2_b0fj7"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_bwjpn"]
+
+[sub_resource type="Sky" id="Sky_hfysu"]
+sky_material = SubResource("ProceduralSkyMaterial_bwjpn")
+
+[sub_resource type="Environment" id="Environment_dpqee"]
+background_mode = 2
+sky = SubResource("Sky_hfysu")
+tonemap_mode = 2
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.0
+
+[node name="World" type="Node3D"]
+script = ExtResource("1_p0fye")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="RoundTimer" parent="UI" instance=ExtResource("1_ajbpj")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_dpqee")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866024, -0.433016, 0.250001, -0.353555, 0.883882, 0.306189, -0.353556, 0.176778, -0.918558, 0, 0, 0)
+light_energy = 0.4
+shadow_enabled = true
+
+[node name="Level" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, -1.478, -28)
+
+[node name="Floor" type="CSGBox3D" parent="Level"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00822449, -5.5, 0.177879)
+use_collision = true
+size = Vector3(100, 12, 100)
+material = ExtResource("2_b0fj7")
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("uid://dey3j5c31717w")
+spawn_path = NodePath("../Players")
+spawn_limit = 4
+
+[node name="Players" type="Node3D" parent="."]

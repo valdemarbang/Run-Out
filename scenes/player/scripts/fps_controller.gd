@@ -4,7 +4,6 @@ extends CharacterBody3D
 
 # Walk settings
 const JUMP_VELOCITY = 6.0
-const AUTO_BHOP = true
 const WALK_SPEED = 7.0
 const GROUND_ACCEL = 14.0
 const GROUND_DECEL = 10.0
@@ -33,6 +32,18 @@ const HEADBOB_MOVE_AMOUNT = 0.06
 const HEADBOB_FREQUENCY = 2.4
 var headbob_time := 0.0
 
+# Team information
+const TEAM_HIDER := 0
+const TEAM_SEEKER := 1
+
+var team_id: int = -1
+const TEAM_COLOR_SEEKER := Color(0.25, 0.6, 1.0)
+const TEAM_COLOR_HIDER := Color(1.0, 0.3, 0.25)
+
+var is_caught := false
+@onready var _mesh: MeshInstance3D = $"WorldModel/MeshInstance3D" if has_node("WorldModel/MeshInstance3D") else null
+@onready var _touch_area: Area3D = null
+
 # Hud
 var health = 100
 
@@ -43,37 +54,95 @@ var was_on_floor_last_frame : bool = true
 var fall_damage_min_velocity : float = 12.0  # minimum velocity to start taking damage
 var fall_damage_multiplier : float = 2.5    # multiplies the excess velocity to damage
 
+@onready var input : MultiplayerSynchronizer = $PlayerInput
+
 func get_move_speed() -> float:
 	if is_crouched:
 		return WALK_SPEED * 0.8
 	else:
 		return WALK_SPEED
-
-func _ready():
-	# Runs when player model first loads into the world
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	
-	# Hide your own player model from the player camera
-	for child in %WorldModel.find_children("*", "VisualInstance3D"):
-		child.set_layer_mask_value(1, false)
-		child.set_layer_mask_value(2, true)
 		
-func  _unhandled_input(event: InputEvent) -> void:
-	# Handle all keyboard input to playermodel
+func _ready() -> void:
+	print("=== FPS Controller Ready ===")
+	print("Player name: ", name)
+	print("My multiplayer ID: ", multiplayer.get_unique_id())
+	print("My authority: ", get_multiplayer_authority())
+	print("Is multiplayer authority: ", is_multiplayer_authority())
+	print("PlayerInput authority: ", $PlayerInput.get_multiplayer_authority())
 	
-	# Check if mouseclick and we can use mouse
-	if event is InputEventMouseButton:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	elif event.is_action_pressed("ui_cancel"): # Escape clicked then stop using mouse
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	# Set team if no team is assigned yet.
+	if team_id != -1:
+		_apply_team_visual()
 	
-	# Use the mouse to move the camera in the scene
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		if event is InputEventMouseMotion:
-			rotate_y(-event.relative.x * LOOK_SENSITIVITY)
-			%Camera3D.rotate_x(-event.relative.y * LOOK_SENSITIVITY)
-			# Prevent backflips with the camera lmao
-			%Camera3D.rotation.x = clamp(%Camera3D.rotation.x, deg_to_rad(-90), deg_to_rad(90)) 
+	# Only enable camera for the local player
+	var camera = %Camera3D
+	if camera:
+		camera.current = is_multiplayer_authority()
+
+	# Hide world model for local first-person
+	if is_multiplayer_authority():
+		var world_model := get_node_or_null("%WorldModel")
+		if world_model: world_model.visible = false
+		var glasses := get_node_or_null("WorldModel/disguise-glasses")
+		if glasses: glasses.visible = false
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	_touch_area = get_node_or_null("TouchArea") as Area3D
+	if _touch_area and not _touch_area.body_entered.is_connected(_on_touch_area_body_entered):
+		_touch_area.body_entered.connect(_on_touch_area_body_entered)
+
+func set_team(team: int) -> void:
+	team_id = team
+	_apply_team_visual()
+
+func _apply_team_visual() -> void:
+	if _mesh:
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = TEAM_COLOR_SEEKER if team_id == TEAM_SEEKER else TEAM_COLOR_HIDER
+		_mesh.material_override = mat
+
+func set_caught(caught: bool) -> void:
+	# Make the player disappear and stop interacting
+	visible = not caught
+	collision_layer = 0 if caught else 1
+	collision_mask = 0 if caught else 1
+	var cs := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if cs: cs.disabled = caught
+	if _touch_area:
+		_touch_area.monitoring = not caught
+		_touch_area.monitorable = not caught
+	if is_multiplayer_authority() and caught:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Only process input for OUR player
+	if not is_multiplayer_authority():
+		return
+	
+	# Allow ESC to release mouse - using the actual ESC key
+	if event is InputEventKey and event.keycode == KEY_ESCAPE and event.pressed:
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		else:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		get_viewport().set_input_as_handled()
+		return
+	
+	# Handle mouse movement
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		rotate_y(-event.relative.x * LOOK_SENSITIVITY)
+		%Head.rotate_x(-event.relative.y * LOOK_SENSITIVITY)
+		%Head.rotation.x = clampf(%Head.rotation.x, -deg_to_rad(89), deg_to_rad(89))
+		
+		# Sync rotation to other clients
+		if multiplayer.is_server():
+			_sync_rotation.rpc(rotation.y, %Head.rotation.x)
+
+@rpc("unreliable")
+func _sync_rotation(body_y: float, head_x: float):
+	if not is_multiplayer_authority():
+		rotation.y = body_y
+		%Head.rotation.x = head_x
 
 func _handle_air_physics(delta) -> void:
 	# Handle the air physics for the player model
@@ -201,16 +270,47 @@ func _snap_down_to_stairs_check() -> void:
 			did_snap = true
 	_snapped_to_stairs_last_frame = did_snap
 
+func reset_spawn_state() -> void:
+	# Physics
+	velocity = Vector3.ZERO
+	_snapped_to_stairs_last_frame = false
+	_last_frame_was_on_floor = -INF
+
+	# Crouch/camera/shape back to defaults
+	is_crouched = false
+	if has_node("CollisionShape3D"):
+		var cs := $CollisionShape3D
+		if cs.shape and cs.shape is CapsuleShape3D:
+			# Your standing defaults
+			cs.shape.height = 2.0
+			cs.position.y = 1.0
+	if has_node("HeadOriginalPos/Head"):
+		$"HeadOriginalPos/Head".position.y = 0.0
+	if has_node("%WorldModel"):
+		%WorldModel.scale.y = 1.0
+
+	# Clear caught state if used
+	if has_method("set_caught"):
+		set_caught(false)
+
 func _physics_process(delta: float) -> void:
-	# Normalize to keep 1.0 or below for multiple keys at the same time.
-	var input_dir = Input.get_vector("left", "right", "up", "down").normalized()
-	# How we want to character to move in the world.
-	wish_dir = self.global_transform.basis * Vector3(input_dir.x, 0., input_dir.y)
+	# Only process physics for OUR player
+	if not is_multiplayer_authority():
+		return
 	
+	# Block control if caught
+	if is_caught:
+		return
+
+	# Get input from the PlayerInput synchronizer
+	var input_dir = input.input_direction
+	wish_dir = transform.basis * Vector3(input_dir.x, 0., input_dir.y)
+	
+	# Handle crouching with the proper function
 	_handle_crouch(delta)
 	
 	if is_on_floor() or _snapped_to_stairs_last_frame: # Handle bhopping and jumping
-		if Input.is_action_just_pressed("jump") or (AUTO_BHOP and Input.is_action_pressed("jump")):
+		if input.jumping:
 			self.velocity.y = JUMP_VELOCITY
 		_handle_ground_physics(delta)
 		_last_frame_was_on_floor = Engine.get_physics_frames() # Handle stairs.
@@ -221,26 +321,30 @@ func _physics_process(delta: float) -> void:
 		move_and_slide() # Moves the Char based on velocity.
 		_snap_down_to_stairs_check()
 		
+	# Sync crouch state to other clients after processing
+	if is_crouched != _last_crouch_state:
+		_last_crouch_state = is_crouched
+		_sync_crouch.rpc(is_crouched)  # Remove the if multiplayer.is_server() check
+
+var _last_crouch_state = false
+
 @onready var _original_player_height = $CollisionShape3D.shape.height
 func _handle_crouch(delta) -> void:
 	var was_crouched_last_frame = is_crouched
 
-	# 1) Läs input — sätt crouch om crouch-knappen hålls ner
-	if Input.is_action_pressed("crouch"):
+	# 1) Read input — crouch while button is held
+	if input.crouching:
 		is_crouched = true
 	elif is_crouched:
-		# 2) Testa om det finns plats att resa sig (test_move returnerar true om det skulle kollidera)
+		# 2) Test if there's room to stand up
 		var stand_motion = Vector3(0, CROUCH_SMALLER_MODEL, 0)
 		var test_result = KinematicCollision3D.new()
 		var would_collide = self.test_move(self.global_transform, stand_motion, test_result)
 		if not would_collide:
-			# finns plats -> stå upp
+			# Room to stand up
 			is_crouched = false
-		else:
-			# finns inte plats -> fortsätt crouch
-			is_crouched = true
 
-	# 3) Hantera "crouch-jump" (flytta spelaren om vi byter läge i luften)
+	# 3) Handle "crouch-jump" (move player if we change state in the air)
 	var translate_y_if_possible = 0.0
 	if was_crouched_last_frame != is_crouched and not is_on_floor() and not _snapped_to_stairs_last_frame:
 		translate_y_if_possible = CROUCH_JUMP_ADD if is_crouched else -CROUCH_JUMP_ADD
@@ -252,14 +356,49 @@ func _handle_crouch(delta) -> void:
 		%Head.position.y -= result.get_travel().y
 		%Head.position.y = clampf(%Head.position.y, -CROUCH_SMALLER_MODEL, 0)
 
-	# 4) Mjuk head/camera-övergång varje frame
+	# 4) Smooth head/camera transition every frame
 	%Head.position.y = move_toward(%Head.position.y, -CROUCH_SMALLER_MODEL if is_crouched else 0, 7.0 * delta)
 
-	# 5) Uppdatera collision-shape höjd (baserat på is_crouched)
-	#    Viktigt: collision ändras bara baserat på is_crouched som sattes efter klarhets-testet ovan.
+	# 5) Update collision shape height (based on is_crouched)
 	$CollisionShape3D.shape.height = _original_player_height - CROUCH_SMALLER_MODEL if is_crouched else _original_player_height
 	$CollisionShape3D.position.y = $CollisionShape3D.shape.height / 2
 
-	# 6) Mjuk visuellt scale (gör inte snap tillbaka till 1.0 om vi inte kan stå)
+	# 6) Smooth visual scale
 	var target_scale_y = 0.7 if is_crouched else 1.0
 	%WorldModel.scale.y = lerp(%WorldModel.scale.y, target_scale_y, clamp(12.0 * delta, 0.0, 1.0))
+
+@rpc("any_peer", "call_local", "reliable")
+func _sync_crouch(crouched: bool):
+	# This runs on all peers when anyone crouches
+	if not is_multiplayer_authority():
+		is_crouched = crouched
+		# Update visual representation for other players
+		var target_scale_y = 0.7 if is_crouched else 1.0
+		%WorldModel.scale.y = target_scale_y
+		
+		# Update collision (important for hit detection)
+		$CollisionShape3D.shape.height = (_original_player_height - CROUCH_SMALLER_MODEL) if is_crouched else _original_player_height
+		$CollisionShape3D.position.y = $CollisionShape3D.shape.height / 2
+
+func _on_touch_area_body_entered(body: Node) -> void:
+	if not is_multiplayer_authority():
+		return
+	if team_id != TEAM_SEEKER:
+		return
+
+	var target_id := -1
+	if body is CharacterBody3D and body.name.is_valid_int():
+		target_id = body.name.to_int()
+	if target_id == -1 or target_id == name.to_int():
+		return
+
+	# Find the Level node via group (set in level.gd)
+	var level := get_tree().get_first_node_in_group("level")
+	if level == null:
+		return
+
+	var my_id := name.to_int()
+	if multiplayer.is_server():
+		level.request_catch(my_id, target_id)               # call directly on server
+	else:
+		level.request_catch.rpc_id(1, my_id, target_id)      # ask host to validate

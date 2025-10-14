@@ -6,4 +6,4 @@ func _ready():
 	# Create RoundManager instance and add it as a child
 	round_manager = RoundManager.new()
 	add_child(round_manager)
-	round_manager.start_round(90)
+	#round_manager.start_round(10)

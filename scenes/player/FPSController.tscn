@@ -1,16 +1,50 @@
-[gd_scene load_steps=7 format=3 uid="uid://dey3j5c31717w"]
+[gd_scene load_steps=11 format=3 uid="uid://dey3j5c31717w"]
 
 [ext_resource type="Script" uid="uid://d2x26c1kxayeu" path="res://scenes/player/scripts/fps_controller.gd" id="1_2j53v"]
 [ext_resource type="PackedScene" uid="uid://gvm0me264r32" path="res://assets/models/disguise-glasses.glb" id="2_jryqt"]
+[ext_resource type="Script" uid="uid://bgdqvraixpxgb" path="res://scenes/player/scripts/player_input.gd" id="2_pxail"]
 [ext_resource type="PackedScene" uid="uid://b2a45ywl15r6t" path="res://scenes/ui/hud/hud.tscn" id="3_ejfxw"]
 [ext_resource type="Script" uid="uid://cmlt3isp5156x" path="res://scenes/ui/hud/hud.gd" id="4_pxail"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_server"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:velocity")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_input"]
+properties/0/path = NodePath(".:input_direction")
+properties/0/spawn = false
+properties/0/replication_mode = 0
+properties/1/path = NodePath(".:jumping")
+properties/1/spawn = false
+properties/1/replication_mode = 0
+properties/2/path = NodePath(".:crouching")
+properties/2/spawn = false
+properties/2/replication_mode = 0
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_f6xud"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_jryqt"]
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_pxail"]
+size = Vector3(0.672119, 1.1958, 0.171021)
+
 [node name="CharacterBody3D" type="CharacterBody3D"]
 script = ExtResource("1_2j53v")
+
+[node name="ServerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_server")
+
+[node name="PlayerInput" type="MultiplayerSynchronizer" parent="."]
+root_path = NodePath(".")
+replication_config = SubResource("SceneReplicationConfig_input")
+script = ExtResource("2_pxail")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
@@ -48,3 +82,9 @@ target_position = Vector3(0, -0.75, 0)
 
 [node name="Hud" parent="." instance=ExtResource("3_ejfxw")]
 script = ExtResource("4_pxail")
+
+[node name="TouchArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TouchArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00939941, 0.936786, -0.514385)
+shape = SubResource("BoxShape3D_pxail")

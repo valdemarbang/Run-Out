@@ -17,7 +17,6 @@ config/features=PackedStringArray("4.4", "Forward Plus")
 [autoload]
 
 Global="*res://autoload/global.gd"
-GameState="*res://autoload/game_state.gd"
 
 [editor_plugins]
 
