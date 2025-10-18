@@ -13,6 +13,8 @@ const GROUND_FRICTION = 6.0
 const CROUCH_SMALLER_MODEL = 0.7
 const CROUCH_JUMP_ADD = CROUCH_SMALLER_MODEL * 0.9 # for crouch jumps
 var is_crouched = false
+var _last_crouch_state = false
+@onready var _original_player_height = $CollisionShape3D.shape.height
 
 # Stairs settings
 const MAX_STEP_HEIGHT = 0.5
@@ -44,17 +46,36 @@ var is_caught := false
 @onready var _mesh: MeshInstance3D = $"WorldModel/MeshInstance3D" if has_node("WorldModel/MeshInstance3D") else null
 @onready var _touch_area: Area3D = null
 
-# Hud
-var health = 100
+# Fall outside the map
+const DEATH_Y := -50.0
+var _out_of_bounds_reported := false
 
-# Fall damage settings
-# Fall damage settings
-var fall_start_y : float = 0.0
 var was_on_floor_last_frame : bool = true
-var fall_damage_min_velocity : float = 12.0  # minimum velocity to start taking damage
-var fall_damage_multiplier : float = 2.5    # multiplies the excess velocity to damage
 
 @onready var input : MultiplayerSynchronizer = $PlayerInput
+
+# Spectate state
+var is_spectating: bool = false
+var _spectate_fixed_pos: Vector3 = Vector3.ZERO
+
+# Sound effect
+@onready var _footsteps_sfx: AudioStreamPlayer3D = %FootstepsSFX
+@onready var _catch_sfx: AudioStreamPlayer3D = %CatchSFX
+
+var _step_timer := 0.0
+const STEP_INTERVAL_WALK := 0.4
+
+func start_map_spectating(pos: Vector3, look_at: Vector3) -> void:
+	print("spectate", pos, look_at)
+	is_spectating = true
+	_spectate_fixed_pos = pos
+	%Camera3D.look_at(look_at, Vector3.UP)
+	%Camera3D.transform = Transform3D.IDENTITY
+
+func stop_spectating() -> void:
+	if not is_spectating:
+		return
+	is_spectating = false
 
 func get_move_speed() -> float:
 	if is_crouched:
@@ -75,21 +96,22 @@ func _ready() -> void:
 		_apply_team_visual()
 	
 	# Only enable camera for the local player
-	var camera = %Camera3D
-	if camera:
-		camera.current = is_multiplayer_authority()
+	%Camera3D.current = is_multiplayer_authority()
 
-	# Hide world model for local first-person
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	_reset_models()
+
+	_touch_area = get_node_or_null("TouchArea") as Area3D
+	if _touch_area and not _touch_area.body_entered.is_connected(_on_touch_area_body_entered):
+		_touch_area.body_entered.connect(_on_touch_area_body_entered)
+
+func _reset_models() -> void:
 	if is_multiplayer_authority():
 		var world_model := get_node_or_null("%WorldModel")
 		if world_model: world_model.visible = false
 		var glasses := get_node_or_null("WorldModel/disguise-glasses")
 		if glasses: glasses.visible = false
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-
-	_touch_area = get_node_or_null("TouchArea") as Area3D
-	if _touch_area and not _touch_area.body_entered.is_connected(_on_touch_area_body_entered):
-		_touch_area.body_entered.connect(_on_touch_area_body_entered)
 
 func set_team(team: int) -> void:
 	team_id = team
@@ -102,24 +124,41 @@ func _apply_team_visual() -> void:
 		_mesh.material_override = mat
 
 func set_caught(caught: bool) -> void:
-	# Make the player disappear and stop interacting
-	visible = not caught
-	collision_layer = 0 if caught else 1
-	collision_mask = 0 if caught else 1
+	if is_caught == caught:
+		return
+	is_caught = caught
+
+	# Hide 3rd-person model when caught (for everyone)
+	var wm := get_node_or_null("%WorldModel")
+	if wm:
+		wm.visible = not caught
+	var glasses := get_node_or_null("WorldModel/disguise-glasses")
+	if glasses:
+		glasses.visible = not caught
+
 	var cs := get_node_or_null("CollisionShape3D") as CollisionShape3D
-	if cs: cs.disabled = caught
+	if cs:
+		cs.set_deferred("disabled", caught)
 	if _touch_area:
-		_touch_area.monitoring = not caught
-		_touch_area.monitorable = not caught
-	if is_multiplayer_authority() and caught:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_touch_area.set_deferred("monitoring", not caught)
+		_touch_area.set_deferred("monitorable", not caught)
+
+	# Stop any movement so the body doesn’t slide
+	velocity = Vector3.ZERO
+	_catch_sfx.play()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Only process input for OUR player
 	if not is_multiplayer_authority():
 		return
-	
-	# Allow ESC to release mouse - using the actual ESC key
+
+	# Handle mouse movement
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		rotate_y(-event.relative.x * LOOK_SENSITIVITY)
+		%Head.rotate_x(-event.relative.y * LOOK_SENSITIVITY)
+		%Head.rotation.x = clampf(%Head.rotation.x, -deg_to_rad(89), deg_to_rad(89))
+		
+	# Allow ESC to release mouse
 	if event is InputEventKey and event.keycode == KEY_ESCAPE and event.pressed:
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -128,25 +167,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	
-	# Handle mouse movement
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * LOOK_SENSITIVITY)
-		%Head.rotate_x(-event.relative.y * LOOK_SENSITIVITY)
-		%Head.rotation.x = clampf(%Head.rotation.x, -deg_to_rad(89), deg_to_rad(89))
-		
-		# Sync rotation to other clients
-		if multiplayer.is_server():
-			_sync_rotation.rpc(rotation.y, %Head.rotation.x)
-
-@rpc("unreliable")
-func _sync_rotation(body_y: float, head_x: float):
-	if not is_multiplayer_authority():
-		rotation.y = body_y
-		%Head.rotation.x = head_x
-
 func _handle_air_physics(delta) -> void:
-	# Handle the air physics for the player model
-	
 	# Delta amount of seconds that passed since the last physics frame, speed up the fall.
 	self.velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity") * delta
 	
@@ -192,11 +213,6 @@ func _handle_ground_physics(delta) -> void:
 	
 func wall_clip_velocity(wall_coll_normal: Vector3) -> void:
 	# Adjusts the player's velocity so they don't get stuck when colliding with a sloped wall.
-	# 
-	# If the player is moving *into* the wall (velocity has a component in the direction
-	# of the wall's normal), we "clip" that component away so they can slide along
-	# the wall instead of sticking.
-	# If they're moving away from the wall, we do nothing.
 	
 	# If we are moving away from a wall we can return and stop the function
 	if self.velocity.dot(wall_coll_normal) >= 0: return
@@ -236,16 +252,11 @@ func _snap_up_stairs_check(delta) -> bool:
 	var expected_move_motion = self.velocity * Vector3(1,0,1) * delta
 	var step_pos_with_clearance = self.global_transform.translated(expected_move_motion + Vector3(0, MAX_STEP_HEIGHT * 2, 0))
 	# Run a body_test_motion slightly above the pos we expect to move to, towards the floor.
-	#  We give some clearance above to ensure there's ample room for the player.
-	#  If it hits a step <= MAX_STEP_HEIGHT, we can teleport the player on top of the step
-	#  along with their intended motion forward.
 	var down_check_result = KinematicCollision3D.new()
 	if (self.test_move(step_pos_with_clearance, Vector3(0,-MAX_STEP_HEIGHT*2,0), down_check_result)
 	and (down_check_result.get_collider().is_class("StaticBody3D") or down_check_result.get_collider().is_class("CSGShape3D"))):
 		var step_height = ((step_pos_with_clearance.origin + down_check_result.get_travel()) - self.global_position).y
 		# Note I put the step_height <= 0.01 in just because I noticed it prevented some physics glitchiness
-		# 0.02 was found with trial and error. Too much and sometimes get stuck on a stair. Too little and can jitter if running into a ceiling.
-		# The normal character controller (both jolt & default) seems to be able to handled steps up of 0.1 anyway
 		if step_height > MAX_STEP_HEIGHT or step_height <= 0.01 or (down_check_result.get_position() - self.global_position).y > MAX_STEP_HEIGHT: return false
 		%StairsAheadRayCast3D.global_position = down_check_result.get_position() + Vector3(0,MAX_STEP_HEIGHT,0) + expected_move_motion.normalized() * 0.1
 		%StairsAheadRayCast3D.force_raycast_update()
@@ -275,33 +286,45 @@ func reset_spawn_state() -> void:
 	velocity = Vector3.ZERO
 	_snapped_to_stairs_last_frame = false
 	_last_frame_was_on_floor = -INF
+	_out_of_bounds_reported = false
 
 	# Crouch/camera/shape back to defaults
 	is_crouched = false
-	if has_node("CollisionShape3D"):
-		var cs := $CollisionShape3D
-		if cs.shape and cs.shape is CapsuleShape3D:
-			# Your standing defaults
-			cs.shape.height = 2.0
-			cs.position.y = 1.0
-	if has_node("HeadOriginalPos/Head"):
-		$"HeadOriginalPos/Head".position.y = 0.0
-	if has_node("%WorldModel"):
-		%WorldModel.scale.y = 1.0
+	%WorldModel.visible = true
+	%WorldModel.scale.y = 1.0
+	var cs := $CollisionShape3D
+	cs.shape.height = 2.0
+	cs.position.y = 1.0
+	$"HeadOriginalPos/Head".position.y = 0.0
 
-	# Clear caught state if used
-	if has_method("set_caught"):
-		set_caught(false)
+	set_caught(false)
+	stop_spectating()
+	_reset_models()
+	
+	# Fixes camera bug after replacing model
+	%Camera3D.transform = Transform3D.IDENTITY
 
 func _physics_process(delta: float) -> void:
 	# Only process physics for OUR player
 	if not is_multiplayer_authority():
 		return
-	
-	# Block control if caught
-	if is_caught:
+		
+	# Block control if caught or spectating
+	if is_caught or is_spectating:
 		return
 
+	# Out-of-bounds check (report once per fall)
+	if not _out_of_bounds_reported and global_position.y < DEATH_Y:
+		_out_of_bounds_reported = true
+		var level := get_tree().get_first_node_in_group("level")
+		if level:
+			var my_id := name.to_int()
+			if multiplayer.is_server():
+				level.request_out_of_bounds(my_id)
+			else:
+				level.request_out_of_bounds.rpc_id(1, my_id)
+		return
+		
 	# Get input from the PlayerInput synchronizer
 	var input_dir = input.input_direction
 	wish_dir = transform.basis * Vector3(input_dir.x, 0., input_dir.y)
@@ -326,9 +349,6 @@ func _physics_process(delta: float) -> void:
 		_last_crouch_state = is_crouched
 		_sync_crouch.rpc(is_crouched)  # Remove the if multiplayer.is_server() check
 
-var _last_crouch_state = false
-
-@onready var _original_player_height = $CollisionShape3D.shape.height
 func _handle_crouch(delta) -> void:
 	var was_crouched_last_frame = is_crouched
 
@@ -402,3 +422,23 @@ func _on_touch_area_body_entered(body: Node) -> void:
 		level.request_catch(my_id, target_id)               # call directly on server
 	else:
 		level.request_catch.rpc_id(1, my_id, target_id)      # ask host to validate
+
+func _process(delta: float) -> void:
+	# Fixed map spectate: pin camera high above and look down at center
+	if is_spectating:
+		%Camera3D.global_position = _spectate_fixed_pos
+		return
+		
+	_update_footsteps(delta)
+		
+func _update_footsteps(delta: float) -> void:
+	if _footsteps_sfx == null:
+		return
+	var on_ground := is_on_floor()
+	if on_ground and self.velocity.length() > 0:
+		_step_timer -= delta
+		if _step_timer <= 0.0:
+			_footsteps_sfx.play()
+			_step_timer = STEP_INTERVAL_WALK
+	else:
+		_step_timer = 0.0

@@ -24,7 +24,10 @@ func start_round(duration: int) -> void:
 	_running = true
 	_duration = duration
 	_seconds_left = duration
-	_emit_and_broadcast_start(duration)
+	# Emit locally and notify clients (server doesn't call client RPC locally)
+	emit_signal("round_started", duration)
+	emit_signal("time_left_changed", _seconds_left)
+	_client_start.rpc(duration)
 	_tick_timer.start()
 
 func stop_round() -> void:
@@ -34,19 +37,21 @@ func stop_round() -> void:
 		return
 	_running = false
 	_tick_timer.stop()
-	_emit_and_broadcast_end()
+	# Emit locally and notify clients
+	emit_signal("round_ended")
+	_client_end.rpc()
 
 func _on_tick() -> void:
 	if not _running:
 		return
 	_seconds_left = max(0, _seconds_left - 1)
 	emit_signal("time_left_changed", _seconds_left)
-	_client_set_time_left.rpc(_seconds_left) # broadcast
+	_client_set_time_left.rpc(_seconds_left) # broadcast to clients only
 	if _seconds_left <= 0:
 		stop_round()
 
-# Server -> all peers (and self)
-@rpc("authority", "call_local")
+# Server -> all peers (clients only)
+@rpc("authority")
 func _client_start(duration: int) -> void:
 	_running = true
 	_duration = duration
@@ -54,21 +59,12 @@ func _client_start(duration: int) -> void:
 	emit_signal("round_started", duration)
 	emit_signal("time_left_changed", _seconds_left)
 
-@rpc("authority", "call_local", "unreliable")
+@rpc("authority", "unreliable")
 func _client_set_time_left(seconds_left: int) -> void:
 	_seconds_left = seconds_left
 	emit_signal("time_left_changed", _seconds_left)
 
-@rpc("authority", "call_local")
+@rpc("authority")
 func _client_end() -> void:
 	_running = false
 	emit_signal("round_ended")
-
-func _emit_and_broadcast_start(duration: int) -> void:
-	emit_signal("round_started", duration)
-	emit_signal("time_left_changed", _seconds_left)
-	_client_start.rpc(duration)
-
-func _emit_and_broadcast_end() -> void:
-	emit_signal("round_ended")
-	_client_end.rpc()

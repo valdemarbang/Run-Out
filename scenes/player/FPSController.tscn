@@ -1,9 +1,11 @@
-[gd_scene load_steps=11 format=3 uid="uid://dey3j5c31717w"]
+[gd_scene load_steps=13 format=3 uid="uid://dey3j5c31717w"]
 
 [ext_resource type="Script" uid="uid://d2x26c1kxayeu" path="res://scenes/player/scripts/fps_controller.gd" id="1_2j53v"]
 [ext_resource type="PackedScene" uid="uid://gvm0me264r32" path="res://assets/models/disguise-glasses.glb" id="2_jryqt"]
 [ext_resource type="Script" uid="uid://bgdqvraixpxgb" path="res://scenes/player/scripts/player_input.gd" id="2_pxail"]
 [ext_resource type="PackedScene" uid="uid://b2a45ywl15r6t" path="res://scenes/ui/hud/hud.tscn" id="3_ejfxw"]
+[ext_resource type="AudioStream" uid="uid://b21t5817e5cbl" path="res://assets/sounds/footsteps.mp3" id="3_wfa8v"]
+[ext_resource type="AudioStream" uid="uid://rpceh55yorae" path="res://assets/sounds/catch.mp3" id="4_j2u1n"]
 [ext_resource type="Script" uid="uid://cmlt3isp5156x" path="res://scenes/ui/hud/hud.gd" id="4_pxail"]
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_server"]
@@ -46,6 +48,18 @@ root_path = NodePath(".")
 replication_config = SubResource("SceneReplicationConfig_input")
 script = ExtResource("2_pxail")
 
+[node name="FootstepsSFX" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("3_wfa8v")
+unit_size = 1.0
+pitch_scale = 2.0
+max_distance = 10.0
+
+[node name="CatchSFX" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("4_j2u1n")
+max_distance = 10.0
+
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("CapsuleShape3D_f6xud")
@@ -58,6 +72,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 mesh = SubResource("CapsuleMesh_jryqt")
 
 [node name="disguise-glasses" parent="WorldModel" instance=ExtResource("2_jryqt")]
+unique_name_in_owner = true
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.00209947, 1.2718, -0.389632)
 
 [node name="HeadOriginalPos" type="Node3D" parent="."]

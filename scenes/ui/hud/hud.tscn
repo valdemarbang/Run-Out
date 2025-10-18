@@ -10,6 +10,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Crosshair" type="Label" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -26,8 +27,27 @@ theme_override_font_sizes/font_size = 20
 text = "+"
 
 [node name="RoundBanner" type="Label" parent="."]
-layout_mode = 0
-offset_left = 484.0
-offset_top = 100.0
-offset_right = 648.0
-offset_bottom = 187.0
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -82.0
+offset_top = 27.0
+offset_right = 82.0
+offset_bottom = 114.0
+grow_horizontal = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SpawnInfo" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -314.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = 54.0
+grow_horizontal = 0
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cx2crunae4mep"]
+[gd_scene load_steps=3 format=3 uid="uid://cx2crunae4mep"]
 
 [ext_resource type="Script" uid="uid://d1c1di3gty1th" path="res://scenes/ui/main_menu.gd" id="1_sl1te"]
+[ext_resource type="AudioStream" uid="uid://e66l7427q3gr" path="res://assets/sounds/main_menu.mp3" id="2_fe2o3"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -11,16 +12,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_sl1te")
 
-[node name="Level" type="Node" parent="."]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("2_fe2o3")
+autoplay = true
 
-[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
-_spawnable_scenes = PackedStringArray("uid://cumlkudt7n44b")
-spawn_path = NodePath("../Level")
-spawn_limit = 1
+[node name="Level" type="Node" parent="."]
 
 [node name="ColorRect" type="ColorRect" parent="."]
 layout_mode = 0
-offset_right = 1841.0
+offset_right = 2329.0
 offset_bottom = 1163.0
 color = Color(0.85098, 1, 1, 1)
 
@@ -41,10 +42,19 @@ grow_vertical = 2
 
 [node name="Title" type="Label" parent="VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.857735, 1.44392e-05, 0.578338, 1)
+theme_override_colors/font_shadow_color = Color(0.676837, 0.802539, 0.671128, 1)
 theme_override_font_sizes/font_size = 60
 text = "RunOut"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="NameLineEdit" type="LineEdit" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "YOUR NAME"
+alignment = 1
+max_length = 30
 
 [node name="Host Mode" type="Button" parent="VBoxContainer"]
 layout_mode = 2
@@ -56,19 +66,149 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 50
 text = "Connect Client"
 
-[node name="Options" type="Button" parent="VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 50
-text = "Options"
-
 [node name="Exit" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 50
 text = "Exit"
 
+[node name="Control" type="Control" parent="."]
+layout_direction = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="Control"]
+layout_direction = 1
+layout_mode = 0
+offset_left = 180.0
+offset_top = -202.0
+offset_right = 513.0
+offset_bottom = -127.0
+rotation = 0.55511
+theme_override_colors/font_color = Color(0.769974, 0.751095, 0.774737, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "Move Around with:"
+
+[node name="Label2" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = -393.0
+offset_top = -23.7354
+offset_right = -60.0
+offset_bottom = 51.2646
+rotation = -0.791131
+theme_override_colors/font_color = Color(0.873939, 0.724771, 0.62442, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "Bunnyhopping with:"
+
+[node name="Label4" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = -101.0
+offset_top = -244.923
+offset_right = 232.0
+offset_bottom = -169.923
+rotation = -0.0182496
+theme_override_colors/font_color = Color(0.873939, 0.724771, 0.62442, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "Crouch with: "
+
+[node name="Label3" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = -299.0
+offset_top = -43.7354
+offset_right = 34.0
+offset_bottom = 31.2646
+rotation = -0.791131
+theme_override_colors/font_color = Color(0.844418, 0.76902, 0.130579, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "SPACE"
+
+[node name="Label5" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = -55.9998
+offset_top = -215.923
+offset_right = 277.0
+offset_bottom = -140.923
+rotation = 0.00472189
+theme_override_colors/font_color = Color(0.844418, 0.76902, 0.130579, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "CTRL"
+
+[node name="Label7" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = -678.0
+offset_top = -199.0
+offset_right = -638.0
+offset_bottom = -176.0
+
+[node name="Label3" type="Label" parent="Control/Label7"]
+layout_mode = 0
+offset_left = 929.528
+offset_top = 75.0
+offset_right = 1262.53
+offset_bottom = 150.0
+rotation = 0.55511
+theme_override_colors/font_color = Color(0.844418, 0.76902, 0.130579, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "W"
+
+[node name="Label4" type="Label" parent="Control/Label7"]
+layout_mode = 0
+offset_left = 905.528
+offset_top = 87.0
+offset_right = 1238.53
+offset_bottom = 162.0
+rotation = 0.55511
+theme_override_colors/font_color = Color(0.844418, 0.76902, 0.130579, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "A"
+
+[node name="Label5" type="Label" parent="Control/Label7"]
+layout_mode = 0
+offset_left = 923.0
+offset_top = 100.0
+offset_right = 1256.0
+offset_bottom = 175.0
+rotation = 0.55511
+theme_override_colors/font_color = Color(0.844418, 0.76902, 0.130579, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "S"
+
+[node name="Label6" type="Label" parent="Control/Label7"]
+layout_mode = 0
+offset_left = 941.528
+offset_top = 109.0
+offset_right = 1274.53
+offset_bottom = 184.0
+rotation = 0.55511
+theme_override_colors/font_color = Color(0.844418, 0.76902, 0.130579, 1)
+theme_override_colors/font_shadow_color = Color(0.541477, 3.63387e-06, 0.352506, 1)
+theme_override_colors/font_outline_color = Color(0.876031, 0.533603, 0.99438, 1)
+theme_override_font_sizes/font_size = 26
+text = "D"
+
 [connection signal="pressed" from="VBoxContainer/Host Mode" to="." method="_on_host_mode_pressed"]
 [connection signal="ready" from="VBoxContainer/Host Mode" to="." method="_on_start_ready"]
 [connection signal="pressed" from="VBoxContainer/Connect Client" to="." method="_on_connect_client_pressed"]
 [connection signal="ready" from="VBoxContainer/Connect Client" to="." method="_on_start_ready"]
-[connection signal="pressed" from="VBoxContainer/Options" to="." method="_on_options_pressed"]
 [connection signal="pressed" from="VBoxContainer/Exit" to="." method="_on_exit_pressed"]

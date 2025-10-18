@@ -1,15 +1,13 @@
 extends Control
 
 const PORT = 5000
+@onready var name_edit: LineEdit = %NameLineEdit
 
 func _ready():
 	# Connect to multiplayer signals
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 
-func _on_tutorial_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/levels/Tutorial.tscn")
-	
 func _on_options_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/options_menu.tscn")
 	
@@ -24,8 +22,11 @@ func _on_host_mode_pressed() -> void:
 	start_game()
 	
 func start_game():
+	%AudioStreamPlayer.stop()
+	if name_edit:
+		Global.set_display_name(name_edit.text) 
 	# Both server and client should change scene
-	get_tree().change_scene_to_file("res://scenes/levels/Tutorial.tscn")
+	get_tree().change_scene_to_file("res://scenes/levels/Level.tscn")
 
 func change_level(scene: PackedScene):
 	# Changes level, but cleans up everything before changing scene.
@@ -41,7 +42,6 @@ func _on_connect_client_pressed() -> void:
 	var peer = ENetMultiplayerPeer.new()
 	peer.create_client(ip, PORT)
 	multiplayer.multiplayer_peer = peer
-	# Don't call start_game() here - wait for connection confirmation
 
 func _on_connected_to_server():
 	print("Successfully connected to server!")
